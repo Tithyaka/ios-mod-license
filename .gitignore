@@ -1,0 +1,15 @@
+# Private Signing Keys - NEVER COMMIT OR DISTRIBUTE
+*.pem
+ed25519_private.pem
+license_system/ed25519_private.pem
+
+# Backups and temporary files
+*.bak
+*.tmp
+__pycache__/
+*.pyc
+
+# Local build artifacts
+artifacts/
+*.dylib
+!LOLiOS-FREE.dylib

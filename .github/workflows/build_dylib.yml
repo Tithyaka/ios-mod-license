@@ -1,0 +1,69 @@
+name: Build LicenseGuard.dylib
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Compile Apple iOS/macOS Mod Dylib
+    runs-on: macos-14
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Display Apple Developer Environment
+        run: |
+          echo "=== Xcode Version ==="
+          xcodebuild -version
+          echo "=== Active Toolchain ==="
+          xcode-select -p
+          echo "=== Available Apple SDKs ==="
+          xcrun --show-sdk-path --sdk iphoneos || true
+          xcrun --show-sdk-path --sdk macosx || true
+
+      - name: Build LicenseGuard.dylib
+        run: |
+          cd license_system
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Generate Build Summary
+        run: |
+          mkdir -p artifacts
+          cp license_system/LicenseGuard.dylib artifacts/
+          cp license_system/LicenseGuard-iOS-arm64.dylib artifacts/ 2>/dev/null || true
+          cp license_system/LicenseGuard-macOS-universal.dylib artifacts/ 2>/dev/null || true
+
+          cat << EOF > artifacts/build_info.txt
+          ==========================================================
+          LicenseGuard.dylib Build Information
+          ==========================================================
+          Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Target OS:  iOS ARM64 (iOS 12.0+) & macOS Universal
+          Architecture: arm64 / x86_64
+          Embedded Product ID: ROSHack-macOS-v1
+          Public Key: Embedded (ed25519)
+          Signing Status: Ad-hoc code signed (Local injection ready)
+          Private Key Status: EXCLUDED (Never uploaded or distributed)
+          ==========================================================
+          EOF
+
+          echo "=== Artifacts to be published ==="
+          ls -la artifacts/
+
+      - name: Safety Check - Ensure Private Key Is Not Exported
+        run: |
+          if [ -f "artifacts/ed25519_private.pem" ]; then
+            echo "CRITICAL: Private key was accidentally copied to artifacts! Aborting."
+            exit 1
+          fi
+          echo "Security Check: Verified no private keys are present in artifacts."
+
+      - name: Upload LicenseGuard Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: LicenseGuard-Binaries
+          path: artifacts/
+          retention-days: 30
