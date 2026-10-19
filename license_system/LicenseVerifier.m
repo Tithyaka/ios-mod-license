@@ -5,12 +5,22 @@
 
 #define HWID_SALT "KHEANG_VIP_SALT_2026_OFFLINE"
 
-static NSString *ComputeHWIDChecksum(NSString *tag, NSString *cleanHWID) {
-    NSString *input = [NSString stringWithFormat:@"%s:%@:%@", HWID_SALT, [tag uppercaseString], [cleanHWID uppercaseString]];
-    const char *cStr = [input UTF8String];
-    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
-    CC_SHA256(cStr, (CC_LONG)strlen(cStr), digest);
-    return [NSString stringWithFormat:@"%02X%02X", digest[0], digest[1]];
+static BOOL VerifyHWIDChecksum(NSString *tag, NSString *cleanHWID, NSString *checksum) {
+    const char *salts[] = {
+        "KHEANG_VIP_SALT_2026_OFFLINE",
+        "ROSVIP_HWID_SALT_2026_OFFLINE"
+    };
+    for (int i = 0; i < 2; i++) {
+        NSString *input = [NSString stringWithFormat:@"%s:%@:%@", salts[i], [tag uppercaseString], [cleanHWID uppercaseString]];
+        const char *cStr = [input UTF8String];
+        unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+        CC_SHA256(cStr, (CC_LONG)strlen(cStr), digest);
+        NSString *exp = [NSString stringWithFormat:@"%02X%02X", digest[0], digest[1]];
+        if ([[checksum uppercaseString] isEqualToString:exp]) {
+            return YES;
+        }
+    }
+    return NO;
 }
 
 // If public_key.h is generated, include it; otherwise use embedded default
@@ -24,7 +34,7 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
-#define EMBEDDED_PRODUCT_ID "ROSHack-macOS-v1"
+#define EMBEDDED_PRODUCT_ID "ROSVIP-iOS-v1"
 #endif
 
 @implementation LicenseInfo
@@ -164,8 +174,8 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
         }
     }
 
-    // 2. Check if user entered short key (e.g. "KHEANG-7D-HUIES")
-    if ([trimmed hasPrefix:@"KHEANG-"] && ![trimmed containsString:@"."]) {
+    // 2. Check if user entered short key (e.g. "KHEANG-1D-XXXXXX" or "KHEANG-7D-A8B2-C4F1-1FC3")
+    if (([trimmed hasPrefix:@"KHEANG-"] || [trimmed hasPrefix:@"ROSVIP-"]) && ![trimmed containsString:@"."]) {
         NSArray *parts = [trimmed componentsSeparatedByString:@"-"];
         if (parts.count >= 3) {
             NSString *tag = [parts[1] uppercaseString];
@@ -173,11 +183,11 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
             NSString *checksum = nil;
 
             if (parts.count == 5) {
-                // Format: KHEANG-7D-A8B2-C4F1-1FC3
+                // Format: ROSVIP-7D-A8B2-C4F1-1FC3
                 keyHwid = [NSString stringWithFormat:@"%@-%@", parts[2], parts[3]];
                 checksum = parts[4];
             } else if (parts.count == 4) {
-                // Format: KHEANG-7D-A8B2C4F1-1FC3
+                // Format: ROSVIP-7D-A8B2C4F1-1FC3
                 keyHwid = parts[2];
                 checksum = parts[3];
             }
@@ -185,8 +195,7 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
             // If HWID is present, verify checksum and device HWID
             if (keyHwid && checksum) {
                 NSString *cleanKeyHwid = [[keyHwid stringByReplacingOccurrencesOfString:@"-" withString:@""] uppercaseString];
-                NSString *expectedChecksum = ComputeHWIDChecksum(tag, cleanKeyHwid);
-                if (![[checksum uppercaseString] isEqualToString:expectedChecksum]) {
+                if (!VerifyHWIDChecksum(tag, cleanKeyHwid, checksum)) {
                     info.status = LicenseStatusMalformedKey;
                     return info;
                 }
@@ -260,7 +269,7 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
     NSString *sigStr = nil;
     NSString *tag = nil;
 
-    if ([trimmed hasPrefix:@"KHEANG-"]) {
+    if ([trimmed hasPrefix:@"KHEANG-"] || [trimmed hasPrefix:@"ROSVIP-"]) {
         NSRange lastDot = [trimmed rangeOfString:@"." options:NSBackwardsSearch];
         if (lastDot.location == NSNotFound) {
             info.status = LicenseStatusMalformedKey;
@@ -332,7 +341,7 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
     info.isLifetime = (info.expiresAt == 0);
     info.permissions = dict[@"permissions"] ?: @[];
 
-    // Verify duration tag matches signed type if KHEANG- format is used
+    // Verify duration tag matches signed type if ROSVIP- format is used
     if (tag) {
         BOOL tagMatches = NO;
         if ([tag isEqualToString:@"1D"] && [info.type isEqualToString:@"1-day"]) tagMatches = YES;
@@ -347,8 +356,12 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
         }
     }
 
-    // 3. Verify Product ID
-    if (![info.productId isEqualToString:@(EMBEDDED_PRODUCT_ID)]) {
+    // 3. Verify Product ID (compatible across ROSVIP, ROSHack, and LOLiOS)
+    if (![info.productId isEqualToString:@(EMBEDDED_PRODUCT_ID)] &&
+        ![info.productId isEqualToString:@"ROSHack-macOS-v1"] &&
+        ![info.productId isEqualToString:@"ROSVIP-iOS-v1"] &&
+        ![info.productId isEqualToString:@"LOLiOS-FREE"] &&
+        ![info.productId isEqualToString:@"LOLiOS-v1"]) {
         info.status = LicenseStatusProductMismatch;
         return info;
     }

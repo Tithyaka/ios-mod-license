@@ -39,7 +39,7 @@ def verify_token_python(token, public_key, expected_product_id=DEFAULT_PRODUCT_I
 
     trimmed = token.strip()
     tag = None
-    if trimmed.startswith("KHEANG-"):
+    if trimmed.startswith("KHEANG-") or trimmed.startswith("ROSVIP-"):
         dot_idx = trimmed.rfind(".")
         if dot_idx == -1:
             return False, "MALFORMED_FORMAT"
@@ -80,7 +80,7 @@ def verify_token_python(token, public_key, expected_product_id=DEFAULT_PRODUCT_I
     except Exception:
         return False, "INVALID_JSON"
 
-    # Tag validation if KHEANG- format
+    # Tag validation if ROSVIP- format
     if tag:
         tag_map = {"1D": "1-day", "7D": "7-day", "30D": "30-day", "90D": "90-day", "365D": "365-day", "LIFE": "lifetime"}
         if tag_map.get(tag) != data.get("type"):
@@ -105,7 +105,7 @@ def verify_token_python(token, public_key, expected_product_id=DEFAULT_PRODUCT_I
 
 def run_test_suite():
     print("=" * 70)
-    print("         ED25519 OFFLINE LICENSE VALIDATION TEST SUITE          ")
+    print("      ROSVIP OFFLINE LICENSE VALIDATION TEST SUITE (Ed25519)      ")
     print("=" * 70)
 
     private_key, public_key = ensure_keypair()
@@ -167,31 +167,31 @@ def run_test_suite():
     payload_obj["expires_at"] = 0  # Hacker tries to turn 7-day into lifetime
     tampered_json = json.dumps(payload_obj, separators=(",", ":"), sort_keys=True).encode("utf-8")
     tampered_b64 = base64.urlsafe_b64encode(tampered_json).decode("ascii").rstrip("=")
-    tampered_payload_key = f"KHEANG-{tag}-{tampered_b64}.{sig_part}"
+    tampered_payload_key = f"{prefix_parts[0]}-{tag}-{tampered_b64}.{sig_part}"
     valid_tamper, reason_tamper = verify_token_python(tampered_payload_key, public_key)
     assert_test("Reject Tampered Payload (7-day -> Lifetime)", not valid_tamper and reason_tamper == "INVALID_SIGNATURE",
                 f"Result: {reason_tamper}")
 
     # --- Test 7: Duration Tag Tampering ---
-    tag_tampered_key = f"KHEANG-LIFE-{b64_payload}.{sig_part}"
+    tag_tampered_key = f"{prefix_parts[0]}-LIFE-{b64_payload}.{sig_part}"
     valid_tag_tamper, reason_tag_tamper = verify_token_python(tag_tampered_key, public_key)
-    assert_test("Reject Tag Tampering (KHEANG-7D -> KHEANG-LIFE)", not valid_tag_tamper and reason_tag_tamper == "TAG_TYPE_MISMATCH",
+    assert_test(f"Reject Tag Tampering ({prefix_parts[0]}-7D -> {prefix_parts[0]}-LIFE)", not valid_tag_tamper and reason_tag_tamper == "TAG_TYPE_MISMATCH",
                 f"Result: {reason_tag_tamper}")
 
-    # --- Test 7: Wrong Product ID ---
+    # --- Test 8: Wrong Product ID ---
     _, key_wrong_prod = generate_license(private_key, "7-day", timedelta(days=7), product_id="AnotherGame-v2")
-    valid_prod, reason_prod = verify_token_python(key_wrong_prod, public_key, expected_product_id="ROSHack-macOS-v1")
+    valid_prod, reason_prod = verify_token_python(key_wrong_prod, public_key, expected_product_id="ROSVIP-iOS-v1")
     assert_test("Reject Wrong Product ID", not valid_prod and reason_prod == "PRODUCT_MISMATCH",
                 f"Result: {reason_prod}")
 
-    # --- Test 8: Malformed Token String ---
+    # --- Test 9: Malformed Token String ---
     valid_mal, reason_mal = verify_token_python("INVALID-TOKEN-STRING", public_key)
     assert_test("Reject Malformed Token", not valid_mal and reason_mal == "MALFORMED_FORMAT",
                 f"Result: {reason_mal}")
 
     print("-" * 70)
     if all_passed:
-        print(f"[*] ALL {tests_run} TESTS PASSED SUCCESSFULLY! Offline Ed25519 verification is 100% verified.")
+        print(f"[*] ALL {tests_run} TESTS PASSED SUCCESSFULLY! ROSVIP offline Ed25519 verified.")
     else:
         print(f"[!] SOME TESTS FAILED.")
     print("=" * 70)

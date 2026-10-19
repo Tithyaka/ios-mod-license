@@ -1,4 +1,4 @@
-name: Build LicenseGuard.dylib
+name: Build ROSVIP LicenseGuard.dylib
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Compile Apple iOS/macOS Mod Dylib
+    name: Compile ROSVIP iOS/macOS LicenseGuard Dylib
     runs-on: macos-14
     steps:
       - name: Check out repository
@@ -23,7 +23,7 @@ jobs:
           xcrun --show-sdk-path --sdk iphoneos || true
           xcrun --show-sdk-path --sdk macosx || true
 
-      - name: Build LicenseGuard.dylib
+      - name: Build LicenseGuard.dylib (ROSVIP entry)
         run: |
           cd license_system
           chmod +x build.sh
@@ -36,14 +36,15 @@ jobs:
           cp license_system/LicenseGuard-iOS-arm64.dylib artifacts/ 2>/dev/null || true
           cp license_system/LicenseGuard-macOS-universal.dylib artifacts/ 2>/dev/null || true
 
-          cat << EOF > artifacts/build_info.txt
+          cat <<EOF > artifacts/build_info.txt
           ==========================================================
-          LicenseGuard.dylib Build Information
+          ROSVIP LicenseGuard.dylib Build Information
           ==========================================================
           Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           Target OS:  iOS ARM64 (iOS 12.0+) & macOS Universal
           Architecture: arm64 / x86_64
-          Embedded Product ID: ROSHack-macOS-v1
+          Embedded Product ID: ROSVIP-iOS-v1
+          Entry Point: ROSVIP_entry.m (offline HWID lock, no Cloudflare)
           Public Key: Embedded (ed25519)
           Signing Status: Ad-hoc code signed (Local injection ready)
           Private Key Status: EXCLUDED (Never uploaded or distributed)
@@ -64,6 +65,6 @@ jobs:
       - name: Upload LicenseGuard Binaries
         uses: actions/upload-artifact@v4
         with:
-          name: LicenseGuard-Binaries
+          name: ROSVIP-LicenseGuard-Binaries
           path: artifacts/
           retention-days: 30

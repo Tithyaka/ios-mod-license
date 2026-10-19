@@ -7,7 +7,7 @@ echo "=================================================================="
 
 # 1. Verify all required source files exist
 REQUIRED_FILES=(
-    "LicenseGuard_entry.m"
+    "ROSVIP_entry.m"
     "LicenseUI.m"
     "LicenseVerifier.m"
     "LicenseStorage.m"
@@ -39,7 +39,7 @@ COMMON_SRCS=(
     "LicenseStorage.m"
     "LicenseVerifier.m"
     "LicenseUI.m"
-    "LicenseGuard_entry.m"
+    "ROSVIP_entry.m"
 )
 
 # -------------------------------------------------------------

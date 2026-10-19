@@ -24,7 +24,7 @@ except ImportError:
 PRIVATE_KEY_FILE = "ed25519_private.pem"
 PUBLIC_KEY_FILE = "ed25519_public.pem"
 PUBLIC_KEY_HEADER = "public_key.h"
-DEFAULT_PRODUCT_ID = "ROSHack-macOS-v1"
+DEFAULT_PRODUCT_ID = "ROSVIP-iOS-v1"
 
 DURATION_OPTIONS = {
     "1": ("1-day", timedelta(days=1)),
@@ -116,7 +116,7 @@ def generate_license(private_key, duration_type, duration_delta, product_id=DEFA
     signature = private_key.sign(canonical_json)
 
     # Pack into single transportable key string:
-    # Format: KHEANG-<TAG>-<B64_PAYLOAD>.<B64_SIGNATURE>
+    # Format: ROSVIP-<TAG>-<B64_PAYLOAD>.<B64_SIGNATURE>
     tag_map = {
         "1-day": "1D",
         "7-day": "7D",
@@ -132,7 +132,7 @@ def generate_license(private_key, duration_type, duration_delta, product_id=DEFA
 
     return payload_dict, license_key
 
-HWID_SALT = "KHEANG_VIP_SALT_2026_OFFLINE"
+HWID_SALT = "ROSVIP_HWID_SALT_2026_OFFLINE"
 
 def compute_hwid_checksum(tag, clean_hwid):
     import hashlib
@@ -147,11 +147,11 @@ def generate_hwid_key(duration_type, raw_hwid):
     elif len(clean_hwid) > 8: clean_hwid = clean_hwid[:8]
     p1, p2 = clean_hwid[:4], clean_hwid[4:]
     checksum = compute_hwid_checksum(tag, clean_hwid)
-    return f"KHEANG-{tag}-{p1}-{p2}-{checksum}"
+    return f"ROSVIP-{tag}-{p1}-{p2}-{checksum}"
 
 def main():
     print("=" * 65)
-    print("      OFFLINE ED25519 LICENSE GENERATOR (ADMIN APPLICATION)     ")
+    print("        ROSVIP OFFLINE LICENSE GENERATOR (ADMIN APPLICATION)     ")
     print("=" * 65)
 
     private_key, public_key = ensure_keypair()
@@ -184,12 +184,12 @@ def main():
 
     while True:
         print("\nSelect license duration to generate:")
-        print("  [1] 1-Day License   (KHEANG-1D-...)")
-        print("  [2] 7-Day License   (KHEANG-7D-...)")
-        print("  [3] 30-Day License  (KHEANG-30D-...)")
-        print("  [4] 90-Day License  (KHEANG-90D-...)")
-        print("  [5] 365-Day License (KHEANG-365D-...)")
-        print("  [6] Lifetime        (KHEANG-LIFE-...)")
+        print("  [1] 1-Day License   (ROSVIP-1D-...)")
+        print("  [2] 7-Day License   (ROSVIP-7D-...)")
+        print("  [3] 30-Day License  (ROSVIP-30D-...)")
+        print("  [4] 90-Day License  (ROSVIP-90D-...)")
+        print("  [5] 365-Day License (ROSVIP-365D-...)")
+        print("  [6] Lifetime        (ROSVIP-LIFE-...)")
         print("  [Q] Quit")
 
         try:
