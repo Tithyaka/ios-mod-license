@@ -173,7 +173,9 @@ static LicenseInfo *s_currentInfo = nil;
 #else
         UIViewController *rootVC = [self getTopViewController];
         if (!rootVC) {
-            if (completion) completion(YES, info);
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [self showActiveLicenseInfoDialog:info completion:completion];
+            });
             return;
         }
 
@@ -204,7 +206,7 @@ static LicenseInfo *s_currentInfo = nil;
 
 #if TARGET_OS_OSX && !TARGET_OS_MACCATALYST
         NSAlert *alert = [[NSAlert alloc] init];
-        alert.messageText = @"🔐 RoS VIP Activation";
+        alert.messageText = @"🔐 KheangZzIOS VIP Activation";
 
         NSString *body = message
             ? [NSString stringWithFormat:@"%@\n\n📱 Your Device ID:\n%@\n\nSend this ID to the admin on Telegram to receive your key.", message, hwid]
@@ -238,7 +240,12 @@ static LicenseInfo *s_currentInfo = nil;
 
 #else
         UIViewController *rootVC = [self getTopViewController];
-        if (!rootVC) return;
+        if (!rootVC) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [self showActivationDialogWithInitialMessage:message completion:completion];
+            });
+            return;
+        }
 
         NSString *title = @"🔐 KheangZzIOS VIP Activation";
         NSString *body = message
@@ -312,7 +319,7 @@ static LicenseInfo *s_currentInfo = nil;
                     handler:^(UIAlertAction * _Nonnull action) {
             [UIPasteboard generalPasteboard].string = hwid;
             [self showActivationDialogWithInitialMessage:
-                @"✅ Device ID copied! Send it to the RoS VIP admin on Telegram."
+                @"✅ Device ID copied! Send it to the KheangZzIOS VIP admin on Telegram."
              completion:completion];
         }];
 

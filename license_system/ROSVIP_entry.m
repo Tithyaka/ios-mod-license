@@ -31,13 +31,13 @@ static void ROSVIPLicenseInit(void) {
         ^{
             [LicenseUI checkOrPromptActivationWithCompletion:^(BOOL success, LicenseInfo * _Nullable info) {
                 if (success) {
-                    // License verified — ROSVIP features unlocked
-                    NSLog(@"[ROSVIP] ✅ License verified. Type: %@ | Remaining: %@",
+                    // License verified — KheangZzIOS features unlocked
+                    NSLog(@"[KheangZzIOS] ✅ License verified. Type: %@ | Remaining: %@",
                           info.type ?: @"unknown",
                           [info formattedRemainingTime]);
                 } else {
                     // License missing, expired, or HWID mismatch — features locked
-                    NSLog(@"[ROSVIP] ❌ License check failed: %@", [info statusMessage]);
+                    NSLog(@"[KheangZzIOS] ❌ License check failed: %@", [info statusMessage]);
                 }
             }];
         }
