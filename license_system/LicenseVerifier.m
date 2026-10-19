@@ -69,7 +69,7 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
         case LicenseStatusNotActivated:
             return @"No License Installed — Please Activate";
         case LicenseStatusExpired:
-            return @"License Expired — Please Contact the Administrator";
+            return @"License Expired — This key has expired and cannot be used anymore. Please enter a new key.";
         case LicenseStatusClockTampered:
             return @"Clock Rollback Detected — License Locked";
         case LicenseStatusInvalidSignature:
@@ -129,6 +129,9 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
                 else info.type = @"custom";
             }
 
+            // Record in ledger
+            [LicenseStorage saveActivatedKeyRecord:info.rawKey issuedAt:info.issuedAt expiresAt:info.expiresAt];
+
             if (!info.isLifetime && now > info.expiresAt) {
                 info.status = LicenseStatusExpired;
                 return info;
@@ -171,10 +174,38 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
             info.licenseId = trimmed;
             info.productId = @(EMBEDDED_PRODUCT_ID);
             info.type = durType;
+            info.permissions = @[@"all", @"premium", @"aimbot", @"esp", @"norecoil"];
+
+            // Check if key was previously activated in device ledger
+            NSDictionary *record = [LicenseStorage recordForActivatedKey:trimmed];
+            if (record) {
+                int64_t recExpires = [record[@"expiresAt"] longLongValue];
+                int64_t recIssued = [record[@"issuedAt"] longLongValue];
+                info.issuedAt = recIssued;
+                info.expiresAt = recExpires;
+                info.isLifetime = (recExpires == 0);
+
+                if (!info.isLifetime && now > recExpires) {
+                    info.status = LicenseStatusExpired;
+                    return info;
+                }
+
+                int64_t lastObserved = [LicenseStorage loadLastObservedTime];
+                if (lastObserved > 0 && now < (lastObserved - 300)) {
+                    info.status = LicenseStatusClockTampered;
+                    return info;
+                }
+                if (now > lastObserved) {
+                    [LicenseStorage saveLastObservedTime:now];
+                }
+
+                info.status = LicenseStatusValid;
+                return info;
+            }
+
             info.issuedAt = now;
             info.isLifetime = (durationSeconds == 0);
             info.expiresAt = info.isLifetime ? 0 : (now + durationSeconds);
-            info.permissions = @[@"all", @"premium", @"aimbot", @"esp", @"norecoil"];
 
             [LicenseStorage saveLastObservedTime:now];
 
@@ -330,6 +361,7 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
         if (![licenseKey containsString:@"."] && info.rawKey) {
             tokenToSave = [NSString stringWithFormat:@"%@|%lld|%lld", info.rawKey, info.expiresAt, info.issuedAt];
         }
+        [LicenseStorage saveActivatedKeyRecord:info.rawKey ?: licenseKey issuedAt:info.issuedAt expiresAt:info.expiresAt];
         [LicenseStorage saveLicenseToken:tokenToSave error:error];
     }
     return info;

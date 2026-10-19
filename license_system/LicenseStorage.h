@@ -29,6 +29,16 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (int64_t)loadLastObservedTime;
 
+/**
+ * Loads activation record for a key to prevent key reuse after expiration.
+ */
++ (nullable NSDictionary *)recordForActivatedKey:(NSString *)key;
+
+/**
+ * Permanently logs key activation and its expiration timestamp.
+ */
++ (void)saveActivatedKeyRecord:(NSString *)key issuedAt:(int64_t)issuedAt expiresAt:(int64_t)expiresAt;
+
 @end
 
 NS_ASSUME_NONNULL_END

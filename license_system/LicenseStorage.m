@@ -4,6 +4,7 @@
 static NSString * const kKeychainService = @"com.gamemod.license";
 static NSString * const kKeychainAccountLicense = @"active_license_key";
 static NSString * const kKeychainAccountTime = @"last_seen_timestamp";
+static NSString * const kKeychainAccountLedger = @"activated_keys_ledger";
 
 @implementation LicenseStorage
 
@@ -140,6 +141,74 @@ static NSString * const kKeychainAccountTime = @"last_seen_timestamp";
     }
 
     return 0;
+}
+
++ (NSMutableDictionary *)loadLedger {
+    NSDictionary *query = @{
+        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: kKeychainService,
+        (__bridge id)kSecAttrAccount: kKeychainAccountLedger,
+        (__bridge id)kSecReturnData: @YES,
+        (__bridge id)kSecMatchLimit: (__bridge id)kSecMatchLimitOne
+    };
+    CFTypeRef result = NULL;
+    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
+    NSData *data = nil;
+    if (status == errSecSuccess && result != NULL) {
+        data = (__bridge_transfer NSData *)result;
+    } else {
+        NSString *filePath = [[self fallbackDirectory] stringByAppendingPathComponent:@"ledger.dat"];
+        data = [NSData dataWithContentsOfFile:filePath];
+    }
+    if (data) {
+        NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:nil];
+        if ([dict isKindOfClass:[NSDictionary class]]) {
+            return [dict mutableCopy];
+        }
+    }
+    return [NSMutableDictionary dictionary];
+}
+
++ (void)saveLedger:(NSDictionary *)ledger {
+    if (!ledger) return;
+    NSData *data = [NSJSONSerialization dataWithJSONObject:ledger options:0 error:nil];
+    if (!data) return;
+
+    NSDictionary *query = @{
+        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: kKeychainService,
+        (__bridge id)kSecAttrAccount: kKeychainAccountLedger
+    };
+    NSDictionary *attributes = @{
+        (__bridge id)kSecValueData: data,
+        (__bridge id)kSecAttrAccessible: (__bridge id)kSecAttrAccessibleAfterFirstUnlock
+    };
+
+    OSStatus status = SecItemUpdate((__bridge CFDictionaryRef)query, (__bridge CFDictionaryRef)attributes);
+    if (status == errSecItemNotFound) {
+        NSMutableDictionary *newQuery = [query mutableCopy];
+        [newQuery addEntriesFromDictionary:attributes];
+        SecItemAdd((__bridge CFDictionaryRef)newQuery, NULL);
+    }
+
+    NSString *filePath = [[self fallbackDirectory] stringByAppendingPathComponent:@"ledger.dat"];
+    [data writeToFile:filePath atomically:YES];
+}
+
++ (nullable NSDictionary *)recordForActivatedKey:(NSString *)key {
+    if (!key || key.length == 0) return nil;
+    NSMutableDictionary *ledger = [self loadLedger];
+    return ledger[key];
+}
+
++ (void)saveActivatedKeyRecord:(NSString *)key issuedAt:(int64_t)issuedAt expiresAt:(int64_t)expiresAt {
+    if (!key || key.length == 0) return;
+    NSMutableDictionary *ledger = [self loadLedger];
+    ledger[key] = @{
+        @"issuedAt": @(issuedAt),
+        @"expiresAt": @(expiresAt)
+    };
+    [self saveLedger:ledger];
 }
 
 @end
