@@ -281,7 +281,7 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
     }
 
     // 4. Verify Clock & Expiration against UTC current time
-    int64_t now = (int64_t)[[NSDate date] timeIntervalSince1970];
+    now = (int64_t)[[NSDate date] timeIntervalSince1970];
 
     // Anti-Rollback Check
     int64_t lastObserved = [LicenseStorage loadLastObservedTime];
