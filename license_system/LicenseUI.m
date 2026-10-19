@@ -95,14 +95,16 @@ static LicenseInfo *s_currentInfo = nil;
                                    completion:(nullable LicenseActivationCallback)completion {
     dispatch_async(dispatch_get_main_queue(), ^{
 #if TARGET_OS_OSX && !TARGET_OS_MACCATALYST
+        NSString *hwid = [LicenseStorage getDeviceHWID];
         NSAlert *alert = [[NSAlert alloc] init];
-        alert.messageText = @"Mod License Activation";
-        alert.informativeText = message ?: @"Please enter your offline license key below:";
+        alert.messageText = @"KheangZz VIP Activation";
+        alert.informativeText = message ? [NSString stringWithFormat:@"%@\n\nYour Device ID: %@", message, hwid] :
+                                          [NSString stringWithFormat:@"Your Device ID: %@\nSend to admin to get your key:", hwid];
         [alert addButtonWithTitle:@"Activate"];
         [alert addButtonWithTitle:@"Exit Game"];
 
         NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 320, 24)];
-        input.placeholderString = @"e.g. KHEANG-7D-HUIES";
+        input.placeholderString = @"e.g. KHEANG-7D-A8B2-C4F1-1FC3";
         alert.accessoryView = input;
 
         NSInteger response = [alert runModal];
@@ -127,15 +129,17 @@ static LicenseInfo *s_currentInfo = nil;
         UIViewController *rootVC = [self getTopViewController];
         if (!rootVC) return;
 
-        NSString *title = @"License Activation";
-        NSString *body = message ?: @"Enter your offline license key to activate mod features:";
+        NSString *hwid = [LicenseStorage getDeviceHWID];
+        NSString *title = @"KheangZz VIP Activation";
+        NSString *body = message ? [NSString stringWithFormat:@"%@\n\nYour Device ID (HWID):\n%@\n(Send this ID to admin to get your key)", message, hwid] :
+                                   [NSString stringWithFormat:@"Your Device ID (HWID):\n%@\n\nSend this ID to admin to get your key, then enter key below:", hwid];
 
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
                                                                        message:body
                                                                 preferredStyle:UIAlertControllerStyleAlert];
 
         [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
-            textField.placeholder = @"e.g. KHEANG-7D-HUIES";
+            textField.placeholder = @"e.g. KHEANG-7D-A8B2-C4F1-1FC3";
             textField.clearButtonMode = UITextFieldViewModeWhileEditing;
         }];
 
@@ -182,6 +186,13 @@ static LicenseInfo *s_currentInfo = nil;
             }
         }];
 
+        UIAlertAction *copyHwidAction = [UIAlertAction actionWithTitle:[NSString stringWithFormat:@"Copy Device ID (%@)", hwid]
+                                                                 style:UIAlertActionStyleDefault
+                                                               handler:^(UIAlertAction * _Nonnull action) {
+            [UIPasteboard generalPasteboard].string = hwid;
+            [self showActivationDialogWithInitialMessage:@"Device ID copied to clipboard! Send it to admin on Telegram." completion:completion];
+        }];
+
         // When user clicks cancel -> CRASH & CLOSE GAME IMMEDIATELY
         UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel (Exit Game)"
                                                                style:UIAlertActionStyleDestructive
@@ -190,6 +201,7 @@ static LicenseInfo *s_currentInfo = nil;
         }];
 
         [alert addAction:activateAction];
+        [alert addAction:copyHwidAction];
         [alert addAction:cancelAction];
 
         [rootVC presentViewController:alert animated:YES completion:nil];

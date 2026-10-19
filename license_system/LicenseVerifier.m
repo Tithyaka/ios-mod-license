@@ -1,6 +1,17 @@
 #import "LicenseVerifier.h"
 #import "LicenseStorage.h"
 #import "ed25519_verify.h"
+#import <CommonCrypto/CommonDigest.h>
+
+#define HWID_SALT "KHEANG_VIP_SALT_2026_OFFLINE"
+
+static NSString *ComputeHWIDChecksum(NSString *tag, NSString *cleanHWID) {
+    NSString *input = [NSString stringWithFormat:@"%s:%@:%@", HWID_SALT, [tag uppercaseString], [cleanHWID uppercaseString]];
+    const char *cStr = [input UTF8String];
+    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(cStr, (CC_LONG)strlen(cStr), digest);
+    return [NSString stringWithFormat:@"%02X%02X", digest[0], digest[1]];
+}
 
 // If public_key.h is generated, include it; otherwise use embedded default
 #if __has_include("public_key.h")
@@ -78,6 +89,8 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
             return @"Wrong Product License — Incompatible Key";
         case LicenseStatusMalformedKey:
             return @"Malformed License Format — Invalid Key";
+        case LicenseStatusHWIDMismatch:
+            return @"Hardware ID Mismatch — This key is locked to a different device! 1 Key = 1 Device.";
     }
 }
 
@@ -156,6 +169,35 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
         NSArray *parts = [trimmed componentsSeparatedByString:@"-"];
         if (parts.count >= 3) {
             NSString *tag = [parts[1] uppercaseString];
+            NSString *keyHwid = nil;
+            NSString *checksum = nil;
+
+            if (parts.count == 5) {
+                // Format: KHEANG-7D-A8B2-C4F1-1FC3
+                keyHwid = [NSString stringWithFormat:@"%@-%@", parts[2], parts[3]];
+                checksum = parts[4];
+            } else if (parts.count == 4) {
+                // Format: KHEANG-7D-A8B2C4F1-1FC3
+                keyHwid = parts[2];
+                checksum = parts[3];
+            }
+
+            // If HWID is present, verify checksum and device HWID
+            if (keyHwid && checksum) {
+                NSString *cleanKeyHwid = [[keyHwid stringByReplacingOccurrencesOfString:@"-" withString:@""] uppercaseString];
+                NSString *expectedChecksum = ComputeHWIDChecksum(tag, cleanKeyHwid);
+                if (![[checksum uppercaseString] isEqualToString:expectedChecksum]) {
+                    info.status = LicenseStatusMalformedKey;
+                    return info;
+                }
+
+                NSString *curHwid = [[[LicenseStorage getDeviceHWID] stringByReplacingOccurrencesOfString:@"-" withString:@""] uppercaseString];
+                if (![cleanKeyHwid isEqualToString:curHwid]) {
+                    info.status = LicenseStatusHWIDMismatch;
+                    return info;
+                }
+            }
+
             int64_t durationSeconds = 0;
             NSString *durType = @"custom";
 
@@ -309,6 +351,16 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
     if (![info.productId isEqualToString:@(EMBEDDED_PRODUCT_ID)]) {
         info.status = LicenseStatusProductMismatch;
         return info;
+    }
+
+    // 3.5 Verify HWID if bound in payload
+    if (dict[@"hwid"]) {
+        NSString *reqHwid = [[dict[@"hwid"] stringByReplacingOccurrencesOfString:@"-" withString:@""] uppercaseString];
+        NSString *deviceHwid = [[[LicenseStorage getDeviceHWID] stringByReplacingOccurrencesOfString:@"-" withString:@""] uppercaseString];
+        if (![reqHwid isEqualToString:deviceHwid]) {
+            info.status = LicenseStatusHWIDMismatch;
+            return info;
+        }
     }
 
     // 4. Verify Clock & Expiration against UTC current time

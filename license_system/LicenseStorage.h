@@ -39,6 +39,11 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (void)saveActivatedKeyRecord:(NSString *)key issuedAt:(int64_t)issuedAt expiresAt:(int64_t)expiresAt;
 
+/**
+ * Returns the permanent unique Hardware ID (HWID) for this device.
+ */
++ (NSString *)getDeviceHWID;
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -132,6 +132,23 @@ def generate_license(private_key, duration_type, duration_delta, product_id=DEFA
 
     return payload_dict, license_key
 
+HWID_SALT = "KHEANG_VIP_SALT_2026_OFFLINE"
+
+def compute_hwid_checksum(tag, clean_hwid):
+    import hashlib
+    inp = f"{HWID_SALT}:{tag.upper()}:{clean_hwid.upper()}".encode("utf-8")
+    return hashlib.sha256(inp).hexdigest()[:4].upper()
+
+def generate_hwid_key(duration_type, raw_hwid):
+    tag_map = {"1-day": "1D", "7-day": "7D", "30-day": "30D", "90-day": "90D", "365-day": "365D", "lifetime": "LIFE"}
+    tag = tag_map.get(duration_type, duration_type.upper())
+    clean_hwid = raw_hwid.replace("-", "").replace(" ", "").upper()
+    if len(clean_hwid) < 8: clean_hwid = clean_hwid.ljust(8, '0')
+    elif len(clean_hwid) > 8: clean_hwid = clean_hwid[:8]
+    p1, p2 = clean_hwid[:4], clean_hwid[4:]
+    checksum = compute_hwid_checksum(tag, clean_hwid)
+    return f"KHEANG-{tag}-{p1}-{p2}-{checksum}"
+
 def main():
     print("=" * 65)
     print("      OFFLINE ED25519 LICENSE GENERATOR (ADMIN APPLICATION)     ")

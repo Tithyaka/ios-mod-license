@@ -1,10 +1,16 @@
 #import "LicenseStorage.h"
 #import <Security/Security.h>
+#import <CommonCrypto/CommonDigest.h>
+
+#if !TARGET_OS_OSX || TARGET_OS_MACCATALYST
+#import <UIKit/UIKit.h>
+#endif
 
 static NSString * const kKeychainService = @"com.gamemod.license";
 static NSString * const kKeychainAccountLicense = @"active_license_key";
 static NSString * const kKeychainAccountTime = @"last_seen_timestamp";
 static NSString * const kKeychainAccountLedger = @"activated_keys_ledger";
+static NSString * const kKeychainAccountHWID = @"device_hwid";
 
 @implementation LicenseStorage
 
@@ -209,6 +215,66 @@ static NSString * const kKeychainAccountLedger = @"activated_keys_ledger";
         @"expiresAt": @(expiresAt)
     };
     [self saveLedger:ledger];
+}
+
++ (NSString *)getDeviceHWID {
+    // 1. Try Keychain first
+    NSDictionary *query = @{
+        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: kKeychainService,
+        (__bridge id)kSecAttrAccount: kKeychainAccountHWID,
+        (__bridge id)kSecReturnData: @YES,
+        (__bridge id)kSecMatchLimit: (__bridge id)kSecMatchLimitOne
+    };
+    CFTypeRef result = NULL;
+    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
+    if (status == errSecSuccess && result != NULL) {
+        NSData *data = (__bridge_transfer NSData *)result;
+        NSString *hwid = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        if (hwid && hwid.length > 0) return hwid;
+    }
+
+    // 2. Try file fallback
+    NSString *filePath = [[self fallbackDirectory] stringByAppendingPathComponent:@".hwid"];
+    NSData *fileData = [NSData dataWithContentsOfFile:filePath];
+    if (fileData) {
+        NSString *hwid = [[NSString alloc] initWithData:fileData encoding:NSUTF8StringEncoding];
+        if (hwid && hwid.length > 0) return hwid;
+    }
+
+    // 3. Generate stable new HWID
+    NSString *rawSeed = nil;
+#if !TARGET_OS_OSX || TARGET_OS_MACCATALYST
+    rawSeed = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+#endif
+    if (!rawSeed || rawSeed.length == 0) {
+        rawSeed = [[NSUUID UUID] UUIDString];
+    }
+
+    const char *cStr = [rawSeed UTF8String];
+    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(cStr, (CC_LONG)strlen(cStr), digest);
+
+    // Format as 8 uppercase characters: "XXXX-YYYY"
+    NSString *cleanHWID = [NSString stringWithFormat:@"%02X%02X-%02X%02X",
+                           digest[0], digest[1], digest[2], digest[3]];
+
+    NSData *hwidData = [cleanHWID dataUsingEncoding:NSUTF8StringEncoding];
+
+    // Save to Keychain
+    NSDictionary *newQuery = @{
+        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: kKeychainService,
+        (__bridge id)kSecAttrAccount: kKeychainAccountHWID,
+        (__bridge id)kSecValueData: hwidData,
+        (__bridge id)kSecAttrAccessible: (__bridge id)kSecAttrAccessibleAfterFirstUnlock
+    };
+    SecItemAdd((__bridge CFDictionaryRef)newQuery, NULL);
+
+    // Save to file fallback
+    [hwidData writeToFile:filePath atomically:YES];
+
+    return cleanHWID;
 }
 
 @end

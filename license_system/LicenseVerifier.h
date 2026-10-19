@@ -9,7 +9,8 @@ typedef NS_ENUM(NSInteger, LicenseStatus) {
     LicenseStatusClockTampered,
     LicenseStatusInvalidSignature,
     LicenseStatusProductMismatch,
-    LicenseStatusMalformedKey
+    LicenseStatusMalformedKey,
+    LicenseStatusHWIDMismatch
 };
 
 @interface LicenseInfo : NSObject

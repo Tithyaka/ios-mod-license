@@ -7,14 +7,14 @@ using System.Drawing;
 
 public class KeyGenForm : Form {
     private ComboBox cbDuration;
-    private TextBox txtProductId;
+    private TextBox txtHwid;
     private TextBox txtOutput;
     private Label lblStatus;
     private Button btnGenerate;
     private Button btnCopy;
 
     public KeyGenForm() {
-        this.Text = "Offline Ed25519 License Key Generator (Admin)";
+        this.Text = "KHEANG VIP — 1-Device Offline License Key Generator (Admin)";
         this.Size = new Size(580, 480);
         this.StartPosition = FormStartPosition.CenterScreen;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -28,7 +28,7 @@ public class KeyGenForm : Form {
 
     private void InitializeComponents() {
         Label lblTitle = new Label {
-            Text = "ED25519 OFFLINE LICENSE GENERATOR",
+            Text = "KHEANG VIP 1-DEVICE OFFLINE GENERATOR",
             Font = new Font("Segoe UI", 12f, FontStyle.Bold),
             ForeColor = Color.FromArgb(52, 211, 153),
             Location = new Point(20, 18),
@@ -37,30 +37,30 @@ public class KeyGenForm : Form {
         this.Controls.Add(lblTitle);
 
         Label lblSub = new Label {
-            Text = "Cryptographically signed offline keys for your macOS/iOS Game Mod",
+            Text = "1 Key = 1 Device hardware-locked offline keys (Anti-Sharing)",
             ForeColor = Color.FromArgb(156, 163, 175),
             Location = new Point(22, 46),
             AutoSize = true
         };
         this.Controls.Add(lblSub);
 
-        // Product ID
-        Label lblProd = new Label {
-            Text = "Product ID:",
+        // Customer HWID
+        Label lblHwid = new Label {
+            Text = "Customer Device ID (HWID):",
             Location = new Point(22, 85),
             AutoSize = true
         };
-        this.Controls.Add(lblProd);
+        this.Controls.Add(lblHwid);
 
-        txtProductId = new TextBox {
-            Text = "ROSHack-macOS-v1",
+        txtHwid = new TextBox {
+            Text = "",
             Location = new Point(24, 108),
             Size = new Size(250, 26),
             BackColor = Color.FromArgb(35, 40, 52),
             ForeColor = Color.White,
             BorderStyle = BorderStyle.FixedSingle
         };
-        this.Controls.Add(txtProductId);
+        this.Controls.Add(txtHwid);
 
         // Duration
         Label lblDur = new Label {
@@ -156,33 +156,52 @@ public class KeyGenForm : Form {
         this.Controls.Add(lblStatus);
     }
 
-    private void GenerateKey() {
-        string prodId = txtProductId.Text.Trim();
-        if (string.IsNullOrEmpty(prodId)) prodId = "ROSHack-macOS-v1";
+    private static string ComputeHWIDChecksum(string tag, string cleanHwid) {
+        string input = string.Format("KHEANG_VIP_SALT_2026_OFFLINE:{0}:{1}", tag.ToUpper(), cleanHwid.ToUpper());
+        using (SHA256 sha = SHA256.Create()) {
+            byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
+            return string.Format("{0:X2}{1:X2}", hash[0], hash[1]);
+        }
+    }
 
+    private void GenerateKey() {
         int days = 7;
-        string durType = "7-day";
         string tag = "7D";
         switch (cbDuration.SelectedIndex) {
-            case 0: days = 1; durType = "1-day"; tag = "1D"; break;
-            case 1: days = 7; durType = "7-day"; tag = "7D"; break;
-            case 2: days = 30; durType = "30-day"; tag = "30D"; break;
-            case 3: days = 90; durType = "90-day"; tag = "90D"; break;
-            case 4: days = 365; durType = "365-day"; tag = "365D"; break;
-            case 5: days = 0; durType = "lifetime"; tag = "LIFE"; break;
+            case 0: days = 1; tag = "1D"; break;
+            case 1: days = 7; tag = "7D"; break;
+            case 2: days = 30; tag = "30D"; break;
+            case 3: days = 90; tag = "90D"; break;
+            case 4: days = 365; tag = "365D"; break;
+            case 5: days = 0; tag = "LIFE"; break;
         }
 
-        Random rnd = new Random();
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        char[] codeChars = new char[5];
-        for (int i = 0; i < 5; i++) codeChars[i] = chars[rnd.Next(chars.Length)];
-        string code = new string(codeChars);
+        string rawHwid = txtHwid.Text.Trim();
+        string cleanHwid = rawHwid.Replace("-", "").Replace(" ", "").ToUpper();
 
-        string generatedKey = string.Format("KHEANG-{0}-{1}", tag, code);
+        string generatedKey = "";
+        if (!string.IsNullOrEmpty(cleanHwid)) {
+            if (cleanHwid.Length < 8) {
+                cleanHwid = cleanHwid.PadRight(8, '0');
+            } else if (cleanHwid.Length > 8) {
+                cleanHwid = cleanHwid.Substring(0, 8);
+            }
+            string hwidPart1 = cleanHwid.Substring(0, 4);
+            string hwidPart2 = cleanHwid.Substring(4, 4);
+            string checksum = ComputeHWIDChecksum(tag, cleanHwid);
+            generatedKey = string.Format("KHEANG-{0}-{1}-{2}-{3}", tag, hwidPart1, hwidPart2, checksum);
+            lblStatus.Text = string.Format("1-Device Key locked to {0}-{1} ({2})!", hwidPart1, hwidPart2, tag);
+        } else {
+            Random rnd = new Random();
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            char[] codeChars = new char[5];
+            for (int i = 0; i < 5; i++) codeChars[i] = chars[rnd.Next(chars.Length)];
+            string code = new string(codeChars);
+            generatedKey = string.Format("KHEANG-{0}-{1}", tag, code);
+            lblStatus.Text = string.Format("Universal Key generated ({0})!", tag);
+        }
+
         txtOutput.Text = generatedKey;
-
-        string expInfo = (days == 0) ? "Lifetime" : DateTime.UtcNow.AddDays(days).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
-        lblStatus.Text = string.Format("Key generated ({0})! Expires: {1}", tag, expInfo);
         lblStatus.ForeColor = Color.FromArgb(52, 211, 153);
     }
 
