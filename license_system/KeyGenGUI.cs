@@ -172,62 +172,16 @@ public class KeyGenForm : Form {
             case 5: days = 0; durType = "lifetime"; tag = "LIFE"; break;
         }
 
-        string generatedKey = null;
-        try {
-            string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license_gen.py");
-            if (!File.Exists(scriptPath)) {
-                scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license_system", "license_gen.py");
-            }
-            if (File.Exists(scriptPath)) {
-                System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo {
-                    FileName = "py.exe",
-                    Arguments = string.Format("\"{0}\" {1} \"{2}\"", scriptPath, tag, prodId),
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                using (System.Diagnostics.Process p = System.Diagnostics.Process.Start(psi)) {
-                    string output = p.StandardOutput.ReadToEnd();
-                    p.WaitForExit(4000);
-                    string[] lines = output.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                    foreach (string line in lines) {
-                        if (line.Trim().StartsWith("KHEANG-")) {
-                            generatedKey = line.Trim();
-                            break;
-                        }
-                    }
-                }
-            }
-        } catch { }
+        Random rnd = new Random();
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        char[] codeChars = new char[5];
+        for (int i = 0; i < 5; i++) codeChars[i] = chars[rnd.Next(chars.Length)];
+        string code = new string(codeChars);
 
-        long nowUtc = (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-        long expiresUtc = (days == 0) ? 0 : nowUtc + (days * 86400L);
-
-        if (string.IsNullOrEmpty(generatedKey)) {
-            string licId = Guid.NewGuid().ToString().ToUpper();
-            string payloadJson = string.Format(
-                "{{\"expires_at\":{0},\"issued_at\":{1},\"license_id\":\"{2}\",\"permissions\":[\"all\",\"premium\",\"aimbot\",\"esp\",\"norecoil\"],\"product_id\":\"{3}\",\"type\":\"{4}\"}}",
-                expiresUtc, nowUtc, licId, prodId, durType
-            );
-
-            byte[] payloadBytes = Encoding.UTF8.GetBytes(payloadJson);
-            string b64Payload = Convert.ToBase64String(payloadBytes).Replace("+", "-").Replace("/", "_").TrimEnd('=');
-
-            byte[] sigBytes = new byte[64];
-            using (SHA512 sha = SHA512.Create()) {
-                byte[] h1 = sha.ComputeHash(payloadBytes);
-                Array.Copy(h1, 0, sigBytes, 0, 32);
-                byte[] h2 = sha.ComputeHash(h1);
-                Array.Copy(h2, 0, sigBytes, 32, 32);
-            }
-            string b64Sig = Convert.ToBase64String(sigBytes).Replace("+", "-").Replace("/", "_").TrimEnd('=');
-
-            generatedKey = string.Format("KHEANG-{0}-{1}.{2}", tag, b64Payload, b64Sig);
-        }
-
+        string generatedKey = string.Format("KHEANG-{0}-{1}", tag, code);
         txtOutput.Text = generatedKey;
 
-        string expInfo = (expiresUtc == 0) ? "Lifetime" : DateTime.UtcNow.AddDays(days).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+        string expInfo = (days == 0) ? "Lifetime" : DateTime.UtcNow.AddDays(days).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
         lblStatus.Text = string.Format("Key generated ({0})! Expires: {1}", tag, expInfo);
         lblStatus.ForeColor = Color.FromArgb(52, 211, 153);
     }

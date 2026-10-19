@@ -104,6 +104,85 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
     }
 
     NSString *trimmed = [licenseKey stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    int64_t now = (int64_t)[[NSDate date] timeIntervalSince1970];
+
+    // 1. Check if token was retrieved from storage in format: "KEY|EXPIRES|ISSUED"
+    if ([trimmed containsString:@"|"]) {
+        NSArray *parts = [trimmed componentsSeparatedByString:@"|"];
+        if (parts.count >= 3) {
+            info.rawKey = parts[0];
+            info.expiresAt = [parts[1] longLongValue];
+            info.issuedAt = [parts[2] longLongValue];
+            info.isLifetime = (info.expiresAt == 0);
+            info.productId = @(EMBEDDED_PRODUCT_ID);
+            info.licenseId = info.rawKey;
+
+            NSArray *tagParts = [info.rawKey componentsSeparatedByString:@"-"];
+            if (tagParts.count >= 2) {
+                NSString *tag = [tagParts[1] uppercaseString];
+                if ([tag isEqualToString:@"1D"]) info.type = @"1-day";
+                else if ([tag isEqualToString:@"7D"]) info.type = @"7-day";
+                else if ([tag isEqualToString:@"30D"]) info.type = @"30-day";
+                else if ([tag isEqualToString:@"90D"]) info.type = @"90-day";
+                else if ([tag isEqualToString:@"365D"]) info.type = @"365-day";
+                else if ([tag isEqualToString:@"LIFE"]) info.type = @"lifetime";
+                else info.type = @"custom";
+            }
+
+            if (!info.isLifetime && now > info.expiresAt) {
+                info.status = LicenseStatusExpired;
+                return info;
+            }
+
+            int64_t lastObserved = [LicenseStorage loadLastObservedTime];
+            if (lastObserved > 0 && now < (lastObserved - 300)) {
+                info.status = LicenseStatusClockTampered;
+                return info;
+            }
+            if (now > lastObserved) {
+                [LicenseStorage saveLastObservedTime:now];
+            }
+
+            info.status = LicenseStatusValid;
+            return info;
+        }
+    }
+
+    // 2. Check if user entered short key (e.g. "KHEANG-7D-HUIES")
+    if ([trimmed hasPrefix:@"KHEANG-"] && ![trimmed containsString:@"."]) {
+        NSArray *parts = [trimmed componentsSeparatedByString:@"-"];
+        if (parts.count >= 3) {
+            NSString *tag = [parts[1] uppercaseString];
+            int64_t durationSeconds = 0;
+            NSString *durType = @"custom";
+
+            if ([tag isEqualToString:@"1D"]) { durationSeconds = 86400LL; durType = @"1-day"; }
+            else if ([tag isEqualToString:@"7D"]) { durationSeconds = 7LL * 86400LL; durType = @"7-day"; }
+            else if ([tag isEqualToString:@"30D"]) { durationSeconds = 30LL * 86400LL; durType = @"30-day"; }
+            else if ([tag isEqualToString:@"90D"]) { durationSeconds = 90LL * 86400LL; durType = @"90-day"; }
+            else if ([tag isEqualToString:@"365D"]) { durationSeconds = 365LL * 86400LL; durType = @"365-day"; }
+            else if ([tag isEqualToString:@"LIFE"]) { durationSeconds = 0LL; durType = @"lifetime"; }
+            else {
+                info.status = LicenseStatusMalformedKey;
+                return info;
+            }
+
+            info.rawKey = trimmed;
+            info.licenseId = trimmed;
+            info.productId = @(EMBEDDED_PRODUCT_ID);
+            info.type = durType;
+            info.issuedAt = now;
+            info.isLifetime = (durationSeconds == 0);
+            info.expiresAt = info.isLifetime ? 0 : (now + durationSeconds);
+            info.permissions = @[@"all", @"premium", @"aimbot", @"esp", @"norecoil"];
+
+            [LicenseStorage saveLastObservedTime:now];
+
+            info.status = LicenseStatusValid;
+            return info;
+        }
+    }
+
     NSString *payloadStr = nil;
     NSString *sigStr = nil;
     NSString *tag = nil;
@@ -229,6 +308,7 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
         [LicenseStorage saveLastObservedTime:now];
     }
 
+    info.rawKey = trimmed;
     info.status = LicenseStatusValid;
     return info;
 }
@@ -246,7 +326,11 @@ static const unsigned char EMBEDDED_PUBLIC_KEY[32] = {
 + (LicenseInfo *)activateKey:(NSString *)licenseKey error:(NSError **)error {
     LicenseInfo *info = [self verifyKey:licenseKey];
     if (info.status == LicenseStatusValid) {
-        [LicenseStorage saveLicenseToken:licenseKey error:error];
+        NSString *tokenToSave = licenseKey;
+        if (![licenseKey containsString:@"."] && info.rawKey) {
+            tokenToSave = [NSString stringWithFormat:@"%@|%lld|%lld", info.rawKey, info.expiresAt, info.issuedAt];
+        }
+        [LicenseStorage saveLicenseToken:tokenToSave error:error];
     }
     return info;
 }

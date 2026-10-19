@@ -18,6 +18,7 @@ typedef NS_ENUM(NSInteger, LicenseStatus) {
 @property (nonatomic, copy) NSString *licenseId;
 @property (nonatomic, copy) NSString *productId;
 @property (nonatomic, copy) NSString *type;
+@property (nonatomic, copy, nullable) NSString *rawKey;
 @property (nonatomic, assign) int64_t issuedAt;
 @property (nonatomic, assign) int64_t expiresAt;
 @property (nonatomic, assign) BOOL isLifetime;

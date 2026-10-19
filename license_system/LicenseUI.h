@@ -20,6 +20,12 @@ typedef void (^LicenseActivationCallback)(BOOL success, LicenseInfo *info);
                                    completion:(nullable LicenseActivationCallback)completion;
 
 /**
+ * Displays active license status, key name, and expiration breakdown on game launch.
+ */
++ (void)showActiveLicenseInfoDialog:(LicenseInfo *)info
+                         completion:(nullable LicenseActivationCallback)completion;
+
+/**
  * Helper to check whether features are unlocked.
  */
 + (BOOL)isLicenseActive;

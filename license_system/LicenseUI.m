@@ -17,6 +17,20 @@ static LicenseInfo *s_currentInfo = nil;
     return s_isLicenseActive;
 }
 
+#if !TARGET_OS_OSX || TARGET_OS_MACCATALYST
++ (nullable UIViewController *)getTopViewController {
+    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    if (!window && [UIApplication sharedApplication].windows.count > 0) {
+        window = [UIApplication sharedApplication].windows.firstObject;
+    }
+    UIViewController *rootVC = window.rootViewController;
+    while (rootVC.presentedViewController) {
+        rootVC = rootVC.presentedViewController;
+    }
+    return rootVC;
+}
+#endif
+
 + (void)checkOrPromptActivationWithCompletion:(nullable LicenseActivationCallback)completion {
     dispatch_async(dispatch_get_main_queue(), ^{
         LicenseInfo *info = [LicenseVerifier validateInstalledLicense];
@@ -24,7 +38,9 @@ static LicenseInfo *s_currentInfo = nil;
 
         if (info.isUsable) {
             s_isLicenseActive = YES;
-            if (completion) completion(YES, info);
+            // On subsequent game launches with active license:
+            // Display alert showing active key and exact expiration date
+            [self showActiveLicenseInfoDialog:info completion:completion];
         } else {
             s_isLicenseActive = NO;
             NSString *msg = [info statusMessage];
@@ -33,19 +49,60 @@ static LicenseInfo *s_currentInfo = nil;
     });
 }
 
++ (void)showActiveLicenseInfoDialog:(LicenseInfo *)info completion:(nullable LicenseActivationCallback)completion {
+    dispatch_async(dispatch_get_main_queue(), ^{
+#if TARGET_OS_OSX && !TARGET_OS_MACCATALYST
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = @"KheangZzIOS VIP Active";
+        alert.informativeText = [NSString stringWithFormat:@"Key: %@\nExpires: %@\nRemaining: %@",
+                                 info.rawKey ?: info.licenseId ?: @"KHEANG-7D-ACTIVE",
+                                 [info formattedExpirationDate],
+                                 [info formattedRemainingTime]];
+        [alert addButtonWithTitle:@"Continue to Game"];
+        [alert runModal];
+        if (completion) completion(YES, info);
+#else
+        UIViewController *rootVC = [self getTopViewController];
+        if (!rootVC) {
+            if (completion) completion(YES, info);
+            return;
+        }
+
+        NSString *title = @"KheangZzIOS VIP Active";
+        NSString *keyText = info.rawKey ?: info.licenseId ?: @"KHEANG-7D-ACTIVE";
+        NSString *expText = [info formattedExpirationDate];
+        NSString *remText = [info formattedRemainingTime];
+
+        NSString *message = [NSString stringWithFormat:@"Key: %@\n\nExpiration: %@\nTime Left: %@",
+                             keyText, expText, remText];
+
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
+                                                                       message:message
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+
+        [alert addAction:[UIAlertAction actionWithTitle:@"Continue to Game"
+                                                 style:UIAlertActionStyleDefault
+                                               handler:^(UIAlertAction * _Nonnull action) {
+            if (completion) completion(YES, info);
+        }]];
+
+        [rootVC presentViewController:alert animated:YES completion:nil];
+#endif
+    });
+}
+
 + (void)showActivationDialogWithInitialMessage:(nullable NSString *)message
                                    completion:(nullable LicenseActivationCallback)completion {
     dispatch_async(dispatch_get_main_queue(), ^{
 #if TARGET_OS_OSX && !TARGET_OS_MACCATALYST
-        // --- macOS Native AppKit NSAlert ---
         NSAlert *alert = [[NSAlert alloc] init];
         alert.messageText = @"Mod License Activation";
         alert.informativeText = message ?: @"Please enter your offline license key below:";
         [alert addButtonWithTitle:@"Activate"];
-        [alert addButtonWithTitle:@"Exit / Cancel"];
+        [alert addButtonWithTitle:@"Exit Game"];
 
         NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 320, 24)];
-        input.placeholderString = @"Paste LIC-1.xxx.yyy key here";
+        input.placeholderString = @"e.g. KHEANG-7D-HUIES";
         alert.accessoryView = input;
 
         NSInteger response = [alert runModal];
@@ -57,31 +114,17 @@ static LicenseInfo *s_currentInfo = nil;
 
             if (result.isUsable) {
                 s_isLicenseActive = YES;
-                NSAlert *okAlert = [[NSAlert alloc] init];
-                okAlert.messageText = @"License Activated Successfully";
-                okAlert.informativeText = [NSString stringWithFormat:@"Type: %@\nExpires: %@\nRemaining: %@",
-                                           result.type, [result formattedExpirationDate], [result formattedRemainingTime]];
-                [okAlert runModal];
-                if (completion) completion(YES, result);
+                [self showActiveLicenseInfoDialog:result completion:completion];
             } else {
                 s_isLicenseActive = NO;
                 [self showActivationDialogWithInitialMessage:[result statusMessage] completion:completion];
             }
         } else {
-            if (completion) completion(NO, s_currentInfo);
+            // User clicked exit/cancel -> terminate immediately
+            exit(0);
         }
 #else
-        // --- iOS / Mac Catalyst UIAlertController (Matches existing mod style) ---
-        UIViewController *rootVC = nil;
-        UIWindow *window = [UIApplication sharedApplication].keyWindow;
-        if (!window && [UIApplication sharedApplication].windows.count > 0) {
-            window = [UIApplication sharedApplication].windows.firstObject;
-        }
-        rootVC = window.rootViewController;
-        while (rootVC.presentedViewController) {
-            rootVC = rootVC.presentedViewController;
-        }
-
+        UIViewController *rootVC = [self getTopViewController];
         if (!rootVC) return;
 
         NSString *title = @"License Activation";
@@ -92,7 +135,7 @@ static LicenseInfo *s_currentInfo = nil;
                                                                 preferredStyle:UIAlertControllerStyleAlert];
 
         [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
-            textField.placeholder = @"Paste LIC-1.xxx.yyy key here";
+            textField.placeholder = @"e.g. KHEANG-7D-HUIES";
             textField.clearButtonMode = UITextFieldViewModeWhileEditing;
         }];
 
@@ -109,22 +152,41 @@ static LicenseInfo *s_currentInfo = nil;
                 s_isLicenseActive = YES;
                 UIAlertController *successAlert = [UIAlertController
                     alertControllerWithTitle:@"License Activated"
-                                     message:[NSString stringWithFormat:@"Type: %@\nExpires: %@\nRemaining: %@",
-                                              result.type, [result formattedExpirationDate], [result formattedRemainingTime]]
+                                     message:[NSString stringWithFormat:@"Key: %@\nExpires: %@\nRemaining: %@",
+                                              result.rawKey ?: key, [result formattedExpirationDate], [result formattedRemainingTime]]
                               preferredStyle:UIAlertControllerStyleAlert];
-                [successAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+                [successAlert addAction:[UIAlertAction actionWithTitle:@"Play Game"
+                                                                 style:UIAlertActionStyleDefault
+                                                               handler:^(UIAlertAction * _Nonnull act) {
+                    if (completion) completion(YES, result);
+                }]];
                 [rootVC presentViewController:successAlert animated:YES completion:nil];
-                if (completion) completion(YES, result);
             } else {
                 s_isLicenseActive = NO;
-                [self showActivationDialogWithInitialMessage:[result statusMessage] completion:completion];
+                UIAlertController *errAlert = [UIAlertController
+                    alertControllerWithTitle:@"Activation Failed"
+                                     message:[result statusMessage]
+                              preferredStyle:UIAlertControllerStyleAlert];
+                [errAlert addAction:[UIAlertAction actionWithTitle:@"Try Again"
+                                                             style:UIAlertActionStyleDefault
+                                                           handler:^(UIAlertAction * _Nonnull act) {
+                    [self showActivationDialogWithInitialMessage:[result statusMessage] completion:completion];
+                }]];
+                [errAlert addAction:[UIAlertAction actionWithTitle:@"Exit Game"
+                                                             style:UIAlertActionStyleDestructive
+                                                           handler:^(UIAlertAction * _Nonnull act) {
+                    // Immediate crash / exit on cancel/refusal
+                    exit(0);
+                }]];
+                [rootVC presentViewController:errAlert animated:YES completion:nil];
             }
         }];
 
-        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel"
-                                                               style:UIAlertActionStyleCancel
+        // When user clicks cancel -> CRASH & CLOSE GAME IMMEDIATELY
+        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel (Exit Game)"
+                                                               style:UIAlertActionStyleDestructive
                                                              handler:^(UIAlertAction * _Nonnull action) {
-            if (completion) completion(NO, s_currentInfo);
+            exit(0);
         }];
 
         [alert addAction:activateAction];

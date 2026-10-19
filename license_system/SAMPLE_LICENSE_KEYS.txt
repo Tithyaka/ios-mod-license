@@ -1,0 +1,43 @@
+==================================================================
+          OFFLINE ED25519 SAMPLE KEYS (KHEANG FORMAT)             
+==================================================================
+Product: ROSHack-macOS-v1 (macOS / iOS Game Mod)
+Signing Algorithm: Ed25519 Asymmetric Cryptography
+Verification: 100% Offline (No Server Required)
+==================================================================
+
+[1-DAY LICENSE (24 Hours)]
+License Key: KHEANG-1D-eyJleHBpcmVzX2F0IjoxNzkyNDUzMjA0LCJpc3N1ZWRfYXQiOjE3OTIzNjY4MDQsImxpY2Vuc2VfaWQiOiI0NzM0NDE0MS1DQzQ1LTQ5NjUtQUM0Mi04RjgwOEUyRjc2M0MiLCJwZXJtaXNzaW9ucyI6WyJhbGwiLCJwcmVtaXVtIiwiYWltYm90IiwiZXNwIiwibm9yZWNvaWwiXSwicHJvZHVjdF9pZCI6IlJPU0hhY2stbWFjT1MtdjEiLCJ0eXBlIjoiMS1kYXkifQ.FGuWlwYYbX32kx6XKGIVYkwR7fW_uGgwgqzmHB7kHJ1qH7DefmtbFg_dssmX2pZqRqVNejiU07EXkSaViqvJAw
+License ID:  47344141-CC45-4965-AC42-8F808E2F763C
+Expires UTC: 1792453204
+------------------------------------------------------------------
+
+[7-DAY LICENSE (7 x 24 Hours)]
+License Key: KHEANG-7D-eyJleHBpcmVzX2F0IjoxNzkyOTcxNjA0LCJpc3N1ZWRfYXQiOjE3OTIzNjY4MDQsImxpY2Vuc2VfaWQiOiI2QTMwOEM4NC1FNDU2LTQyNDktOUE4QS00RDU1NUE5RTI1RkIiLCJwZXJtaXNzaW9ucyI6WyJhbGwiLCJwcmVtaXVtIiwiYWltYm90IiwiZXNwIiwibm9yZWNvaWwiXSwicHJvZHVjdF9pZCI6IlJPU0hhY2stbWFjT1MtdjEiLCJ0eXBlIjoiNy1kYXkifQ.GUmPlFPOxsG9-IlrrkzD490I-yCWQt3cVo5u1WH-IObk6DojqdsmFAG1zrRvnXmKD5wPUSJ6OG_DeWixQEfICw
+License ID:  6A308C84-E456-4249-9A8A-4D555A9E25FB
+Expires UTC: 1792971604
+------------------------------------------------------------------
+
+[30-DAY LICENSE (30 Days)]
+License Key: KHEANG-30D-eyJleHBpcmVzX2F0IjoxNzk0OTU4ODA0LCJpc3N1ZWRfYXQiOjE3OTIzNjY4MDQsImxpY2Vuc2VfaWQiOiJDMkU1MUJGMy1BNzY3LTQwREEtOEEzNC01QTM2NkU2N0Y0OEIiLCJwZXJtaXNzaW9ucyI6WyJhbGwiLCJwcmVtaXVtIiwiYWltYm90IiwiZXNwIiwibm9yZWNvaWwiXSwicHJvZHVjdF9pZCI6IlJPU0hhY2stbWFjT1MtdjEiLCJ0eXBlIjoiMzAtZGF5In0.abeaB5-YczbUWTcP-1L54-Fpqe7kfDBmnPxwdSSOD01YKJ0j7SBP7HK3Z9xwoTlzTBd9QrhQj7Cw0O04CnpiDQ
+License ID:  C2E51BF3-A767-40DA-8A34-5A366E67F48B
+Expires UTC: 1794958804
+------------------------------------------------------------------
+
+[90-DAY LICENSE (Quarterly)]
+License Key: KHEANG-90D-eyJleHBpcmVzX2F0IjoxODAwMTQyODA0LCJpc3N1ZWRfYXQiOjE3OTIzNjY4MDQsImxpY2Vuc2VfaWQiOiJDRDM2MjMwNi1BOUZFLTQ3NDUtOTQ5Ny0zRjZDNUZGNEQzMDUiLCJwZXJtaXNzaW9ucyI6WyJhbGwiLCJwcmVtaXVtIiwiYWltYm90IiwiZXNwIiwibm9yZWNvaWwiXSwicHJvZHVjdF9pZCI6IlJPU0hhY2stbWFjT1MtdjEiLCJ0eXBlIjoiOTAtZGF5In0.cSnKhiwUhPVmWexwUjc0gQppm5MIwtBvE38Rdd0P-kQU47AD-UC4xUoxhecIa00U3rE0Cj07DyMGaoMDY5BqAQ
+License ID:  CD362306-A9FE-4745-9497-3F6C5FF4D305
+Expires UTC: 1800142804
+------------------------------------------------------------------
+
+[365-DAY LICENSE (1 Year)]
+License Key: KHEANG-365D-eyJleHBpcmVzX2F0IjoxODIzOTAyODA0LCJpc3N1ZWRfYXQiOjE3OTIzNjY4MDQsImxpY2Vuc2VfaWQiOiJDQ0Q2QUYzMS1FNTc1LTRBRUQtQjUxRi1DMEUxODU4NzJFQTAiLCJwZXJtaXNzaW9ucyI6WyJhbGwiLCJwcmVtaXVtIiwiYWltYm90IiwiZXNwIiwibm9yZWNvaWwiXSwicHJvZHVjdF9pZCI6IlJPU0hhY2stbWFjT1MtdjEiLCJ0eXBlIjoiMzY1LWRheSJ9.ssaSSs9PfLIU0dLCV_NozVB_-FUv7OPZUUxZSmnydFySrmYMU6WnWf_S2_scOiB1FZdbsbmjaiZiZOumsbYMBg
+License ID:  CCD6AF31-E575-4AED-B51F-C0E185872EA0
+Expires UTC: 1823902804
+------------------------------------------------------------------
+
+[LIFETIME LICENSE (No Expiration)]
+License Key: KHEANG-LIFE-eyJleHBpcmVzX2F0IjowLCJpc3N1ZWRfYXQiOjE3OTIzNjY4MDQsImxpY2Vuc2VfaWQiOiJDN0Q4ODk2QS1EMTUzLTQ1RTUtOTk5RC0zNDU1NjUzQzMxRjgiLCJwZXJtaXNzaW9ucyI6WyJhbGwiLCJwcmVtaXVtIiwiYWltYm90IiwiZXNwIiwibm9yZWNvaWwiXSwicHJvZHVjdF9pZCI6IlJPU0hhY2stbWFjT1MtdjEiLCJ0eXBlIjoibGlmZXRpbWUifQ.LWgcNcS-dQkmVp53YcViWFiYzEnsF_9Vx3Yc2OWeblcIHSDHT-HD-Q50m1DSlAr5AASEYOws7kAS_8Xl5Ga8Ag
+License ID:  C7D8896A-D153-45E5-999D-3455653C31F8
+Expires UTC: Lifetime — No Scheduled Expiration
+------------------------------------------------------------------
